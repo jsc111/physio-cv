@@ -1,0 +1,47 @@
+import { Landmark } from "@/types/hand"
+
+export function distance3D(a: Landmark, b: Landmark) {
+  return Math.sqrt(
+    (a.x - b.x) ** 2 +
+    (a.y - b.y) ** 2 +
+    (a.z - b.z) ** 2
+  )
+}
+
+// wrist → middle fingertip / wrist → middle knuckle
+export function getStretchRatio(landmarks: Landmark[]) {
+  const wrist = landmarks[0]
+  const middleTip = landmarks[12]
+  const middleKnuckle = landmarks[9]
+
+  const stretchLength = distance3D(wrist, middleTip)
+  const palmLength = distance3D(wrist, middleKnuckle)
+
+  return stretchLength / palmLength
+}
+
+// Normalize pose relative to wrist so we can scale it later
+export function normalizePose(landmarks: Landmark[]): Landmark[] {
+  const wrist = landmarks[0]
+  return landmarks.map(lm => ({
+    x: lm.x - wrist.x,
+    y: lm.y - wrist.y,
+    z: lm.z - wrist.z,
+  }))
+}
+
+// Scale normalized pose by factor and reattach to live wrist
+export function generateTargetPose(
+  normalizedPose: Landmark[],
+  liveLandmarks: Landmark[],
+  scale: number
+): Landmark[] {
+
+  const wrist = liveLandmarks[0]
+
+  return normalizedPose.map(lm => ({
+    x: wrist.x + lm.x * scale,
+    y: wrist.y + lm.y * scale,
+    z: wrist.z + lm.z * scale,
+  }))
+}
