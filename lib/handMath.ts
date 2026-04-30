@@ -45,3 +45,12 @@ export function generateTargetPose(
     z: wrist.z + lm.z * scale,
   }))
 }
+
+export function getProgress(
+  liveLandmarks: Landmark[],
+  baselineRatio: number
+) {
+  const currentRatio = getStretchRatio(liveLandmarks)
+  const targetRatio = baselineRatio * 1.05
+  return currentRatio / targetRatio
+}
