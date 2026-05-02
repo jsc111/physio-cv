@@ -11,15 +11,12 @@ type Props = {
   progress?: number
 }
 
-/** ----------------------------
- *  Finger capsule configuration
- *  ---------------------------- */
 const FINGER_GROUPS = [
-  { color: [170, 196, 255], segs: [[0,1],[1,2],[2,3],[3,4]] },            // thumb
-  { color: [255, 179, 222], segs: [[0,5],[5,6],[6,7],[7,8]] },            // index
-  { color: [179, 255, 204], segs: [[5,9],[9,10],[10,11],[11,12]] },       // middle
-  { color: [255, 212, 163], segs: [[9,13],[13,14],[14,15],[15,16]] },     // ring
-  { color: [255, 224, 102], segs: [[13,17],[17,18],[18,19],[19,20]] },    // pinky
+  { color: [170, 196, 255], segs: [[0,1],[1,2],[2,3],[3,4]] },
+  { color: [255, 179, 222], segs: [[0,5],[5,6],[6,7],[7,8]] },
+  { color: [179, 255, 204], segs: [[5,9],[9,10],[10,11],[11,12]] },
+  { color: [255, 212, 163], segs: [[9,13],[13,14],[14,15],[15,16]] },
+  { color: [255, 224, 102], segs: [[13,17],[17,18],[18,19],[19,20]] },
 ]
 
 export default function HandOverlayCanvas({
@@ -40,20 +37,15 @@ export default function HandOverlayCanvas({
 
   function toCanvasCoords(lm: Landmark, canvas: HTMLCanvasElement) {
     return {
-      x: (1 - lm.x) * canvas.width,
+      x: lm.x * canvas.width,   // ← no manual flip; ctx transform mirrors
       y: lm.y * canvas.height,
     }
   }
 
-  /** ----------------------------
-   * Capsule drawing primitive
-   * ---------------------------- */
   function drawCapsule(
     ctx: CanvasRenderingContext2D,
-    ax: number,
-    ay: number,
-    bx: number,
-    by: number,
+    ax: number, ay: number,
+    bx: number, by: number,
     radius: number
   ) {
     const dx = bx - ax
@@ -73,16 +65,12 @@ export default function HandOverlayCanvas({
     ctx.closePath()
   }
 
-  /** ----------------------------
-   * Active skeleton (colored bones)
-   * ---------------------------- */
   function drawSkeleton(
     ctx: CanvasRenderingContext2D,
     lms: Landmark[],
     canvas: HTMLCanvasElement
   ) {
     const p = Math.min(progressRef.current, 1)
-
     const r = Math.floor(255 * (1 - p))
     const g = Math.floor(255 * p)
 
@@ -107,9 +95,6 @@ export default function HandOverlayCanvas({
     })
   }
 
-  /** ----------------------------
-   * Ghost skeleton (CAPSULE BONES)
-   * ---------------------------- */
   function drawGhostSkeleton(
     ctx: CanvasRenderingContext2D,
     lms: Landmark[],
@@ -121,35 +106,35 @@ export default function HandOverlayCanvas({
     const handSize = Math.sqrt(
       (midMCP.x - wrist.x) ** 2 + (midMCP.y - wrist.y) ** 2
     )
-
     const baseRadius = handSize * 0.07
 
-    FINGER_GROUPS.forEach(({ color: [r, g, b], segs }) => {
+    FINGER_GROUPS.forEach(({ color: [r, g, blue], segs }) => {
       segs.forEach(([aIdx, bIdx], segIndex) => {
+
+        // console.log("fill color:", `rgba(${r},${g},${blue},0.35)`)
+
         const a = toCanvasCoords(lms[aIdx], canvas)
         const b = toCanvasCoords(lms[bIdx], canvas)
-
         const radius = baseRadius * (1 - segIndex * 0.15)
 
         drawCapsule(ctx, a.x, a.y, b.x, b.y, radius)
 
-        ctx.fillStyle = `rgba(${r},${g},${b},0.12)`
-        ctx.strokeStyle = `rgba(${r},${g},${b},0.65)`
-        ctx.lineWidth = 1.5
+        ctx.fillStyle = `rgba(${r},${g},${blue},0.35)`   // ← was 0.12
+        ctx.strokeStyle = `rgba(${r},${g},${blue},0.9)`  // ← was 0.65
+        ctx.lineWidth = 2
 
         ctx.fill()
         ctx.stroke()
       })
     })
 
-    // joints
     lms.forEach((lm) => {
       const { x, y } = toCanvasCoords(lm, canvas)
       ctx.beginPath()
       ctx.arc(x, y, baseRadius * 0.45, 0, Math.PI * 2)
-      ctx.fillStyle = "rgba(255,255,255,0.12)"
+      ctx.fillStyle = "rgba(255,255,255,0.3)"   // ← was 0.12
       ctx.fill()
-      ctx.strokeStyle = "rgba(255,255,255,0.5)"
+      ctx.strokeStyle = "rgba(255,255,255,0.6)"
       ctx.stroke()
     })
   }
@@ -177,17 +162,23 @@ export default function HandOverlayCanvas({
 
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+      // ← Mirror canvas to match video's scale-x-[-1]
+      ctx.save()
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+
       const ghost = ghostRef.current
       const lms = landmarksRef.current
 
       if (ghost) drawGhostSkeleton(ctx, ghost, canvas)
       if (lms) drawSkeleton(ctx, lms, canvas)
 
+      ctx.restore()
+
       animId = requestAnimationFrame(render)
     }
 
     animId = requestAnimationFrame(render)
-
     return () => cancelAnimationFrame(animId)
   }, [videoRef])
 

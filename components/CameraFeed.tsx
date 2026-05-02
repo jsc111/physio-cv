@@ -59,6 +59,7 @@ export default function CameraFeed() {
 
         } else {
           setLandmarks(null)
+          setTargetPose(null)
         }
       })
 

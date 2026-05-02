@@ -36,12 +36,11 @@ export function generateTargetPose(
   liveLandmarks: Landmark[],
   scale: number
 ): Landmark[] {
-
   const wrist = liveLandmarks[0]
 
   return normalizedPose.map(lm => ({
-    x: wrist.x + lm.x * scale,
-    y: wrist.y + lm.y * scale,
+    x: Math.min(Math.max(wrist.x + lm.x * scale, 0), 1),
+    y: Math.min(Math.max(wrist.y + lm.y * scale, 0), 1),
     z: wrist.z + lm.z * scale,
   }))
 }
